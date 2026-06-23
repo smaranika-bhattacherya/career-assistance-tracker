@@ -99,10 +99,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .ld{width:7px;height:7px;border-radius:50%}
 .col-hdr{display:grid;gap:10px;padding:0 14px 5px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)}
 .col-p{grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 65px}
-.col-s{grid-template-columns:32px minmax(0,1.5fr) 52px 80px 90px 65px}
-.srow{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:11px 14px;margin-bottom:6px;display:grid;align-items:center;gap:10px}
-.prow{grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 65px}
-.srow2{grid-template-columns:32px minmax(0,1.5fr) 52px 80px 90px 65px}
+.col-s{grid-template-columns:32px minmax(0,1.3fr) 52px 1fr 80px 65px}
+.srow{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:11px 14px;margin-bottom:6px;display:grid;align-items:start;gap:10px}
+.prow{grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 65px;align-items:center}
+.srow2{grid-template-columns:32px minmax(0,1.3fr) 52px 1fr 80px 65px}
+.pace{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.pace-good{background:#EAF3DE;color:#27500A}
+.pace-slow{background:#FAEEDA;color:#633806}
+.pace-stalled{background:#FCEBEB;color:#791F1F}
+.help-flag{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 6px;border-radius:10px;background:#FCEBEB;color:#791F1F;cursor:pointer;border:none;font-family:inherit;white-space:nowrap}
+.help-flag.off{background:var(--surf2);color:var(--tx3)}
+.nudge-log{margin-top:5px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.nudge-tag{font-size:9px;background:var(--surf2);color:var(--tx3);padding:1px 6px;border-radius:8px}
+.sup-steps{display:flex;align-items:center;gap:3px;flex-wrap:nowrap}
 .srow:hover{border-color:var(--bs)}
 .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
 .avp{background:var(--pul);color:var(--pud)}.avs{background:var(--tel);color:var(--ted)}
@@ -117,6 +126,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .sd.dn{background:var(--te);border-color:var(--te);color:#fff}
 .sd.dn::after{content:'✓';font-size:9px}
 .sd.dn span{display:none}
+.sd-s:hover{border-color:var(--te);color:var(--te)}.sd-s.ip{background:var(--tel);border-color:var(--te);color:var(--ted)}.sd-s.dn{background:var(--te);border-color:var(--te);color:#fff}
 .sc2{width:6px;height:1px;background:var(--bs);flex-shrink:0}
 .sel{font-size:10px;padding:3px 6px;border-radius:var(--r);border:0.5px solid var(--bs);background:var(--surf);color:var(--tx);cursor:pointer;font-family:inherit;width:100%}
 
@@ -140,6 +150,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:
 .rtbl td{padding:7px 8px;border-bottom:0.5px solid var(--b);color:var(--tx)}
 .rtbl tr:last-child td{border-bottom:none}
 .rtbl tr:hover td{background:var(--surf2)}
+.rtab{padding:8px 16px;border:none;background:none;font-size:12px;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap;font-family:inherit}
+.rtab:hover{color:var(--tx2);background:var(--surf2)}
+.rtab-active{color:var(--pu);font-weight:500;border-bottom-color:var(--pu)}
 
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -559,29 +572,60 @@ function renderPipeline(cohId) {
   });
 
   if (support.length) {
-    html += `<div style="font-size:13px;font-weight:600;margin:18px 0 10px;display:flex;align-items:center;gap:8px">
+    html += `<div style="font-size:13px;font-weight:600;margin:18px 0 8px;display:flex;align-items:center;gap:8px">
       Support track <span class="pill pill-t">${support.length} students</span>
     </div>
-    <div class="banner a">Weekly resource drops and check-ins. Tick Upgrade to move a student to the priority track.</div>
-    <div class="col-hdr col-s"><span></span><span>Student</span><span>Score</span><span>Actions</span><span>Upgrade</span><span>Status</span></div>`;
+    <div class="banner a">Same 7-step pipeline as priority — same destination, more support throughout. Steps shown in teal.</div>
+    <div class="col-hdr col-p" style="grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 110px"><span></span><span>Student</span><span>Score</span><span>CV · LI · PF · M1 · M2 · M3 · PP</span><span>Pace · nudges</span></div>`;
     support.forEach(s => {
       const key = cohId + ':' + s.name;
-      const st = studentState[key] || { rd: 0, ci: 0, status: 'Not contacted', upgraded: false };
+      if (!studentState[key]) studentState[key] = { steps: {}, status: 'Not contacted', nudges: 0, lastNudge: null };
+      const st = studentState[key];
+      if (!st.steps) st.steps = {};
+      if (!st.nudges) st.nudges = 0;
+
+      const done = STEPS.filter(d => st.steps[d.k] === 2).length;
+      const inProg = STEPS.filter(d => st.steps[d.k] === 1).length;
+      const pct = Math.round(done / STEPS.length * 100);
+
+      // Pace: based on steps done vs nudges sent
+      let pace, paceColor;
+      if (done === STEPS.length) { pace = 'Completed'; paceColor = 'var(--te)'; }
+      else if (st.nudges === 0 && done === 0) { pace = 'Not started'; paceColor = 'var(--tx3)'; }
+      else if (st.nudges > 3 && done < 2) { pace = 'Stalled'; paceColor = 'var(--re)'; }
+      else if (st.nudges > 1 && inProg === 0 && done < 3) { pace = 'Slow'; paceColor = 'var(--am)'; }
+      else { pace = 'In progress'; paceColor = 'var(--te)'; }
+
+      const stH = STEPS.map((d, i) => {
+        const v = st.steps[d.k] || 0;
+        const conn = i < STEPS.length - 1 ? '<div class="sc2"></div>' : '';
+        // teal theme for support steps
+        const cls = v === 2 ? 'sd sd-s dn' : v === 1 ? 'sd sd-s ip' : 'sd sd-s';
+        return `<div class="${cls}" title="${SNAMES[d.k]}" onclick="cycleStepS('${cohId}','${s.name}','${d.k}')">${v !== 2 ? `<span>${d.l}</span>` : ''}</div>${conn}`;
+      }).join('');
+
       const sopts = SOPTS.map(o => `<option${st.status === o ? ' selected' : ''}>${o}</option>`).join('');
-      html += `<div class="srow srow2">
+
+      html += `<div class="srow" style="grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 110px">
         <div class="av avs">${ini(s.name)}</div>
-        <div><div class="sn">${s.name}</div><div class="se">${s.email}</div></div>
-        <div class="sp sps">${s.score}</div>
-        <div class="sw">
-          <div class="${st.rd ? 'sd dn' : 'sd'}" title="Resource drop sent" onclick="togSup('${cohId}','${s.name}','rd')">${!st.rd ? '<span>RD</span>' : ''}</div>
-          <div class="sc2"></div>
-          <div class="${st.ci ? 'sd dn' : 'sd'}" title="Check-in done" onclick="togSup('${cohId}','${s.name}','ci')">${!st.ci ? '<span>CI</span>' : ''}</div>
-          <span style="font-size:9px;color:var(--tx3);margin-left:4px">${(st.rd || 0) + (st.ci || 0)}/2</span>
+        <div>
+          <div class="sn">${s.name}</div>
+          <div class="se">${s.email}</div>
+          <div class="pbar-w"><div class="pbar-f" style="width:${pct}%;background:var(--te)"></div></div>
         </div>
-        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2);cursor:pointer">
-          <input type="checkbox"${st.upgraded ? ' checked' : ''} onchange="setUpg('${cohId}','${s.name}',this.checked)"> Upgrade ↑
-        </label>
-        <select class="sel" onchange="setStatus('${cohId}','${s.name}',this.value)">${sopts}</select>
+        <div class="sp sps">${s.score}</div>
+        <div>
+          <div class="sw">${stH}</div>
+          <div style="font-size:9px;color:var(--tx3);margin-top:2px">Next: ${STEPS.find(d=>st.steps[d.k]!==2) ? SNAMES[STEPS.find(d=>st.steps[d.k]!==2).k] : 'All done ✓'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+          <span style="font-size:10px;font-weight:500;color:${paceColor}">${pace}</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <button onclick="addNudge('${cohId}','${s.name}')" style="font-size:9px;padding:2px 7px;border-radius:10px;border:0.5px solid var(--bs);background:var(--surf);cursor:pointer;color:var(--tx2);font-family:inherit">+ nudge</button>
+            <span style="font-size:10px;color:var(--tx3)">${st.nudges} sent</span>
+          </div>
+          <select class="sel" style="font-size:10px" onchange="setStatus('${cohId}','${s.name}',this.value)">${sopts}</select>
+        </div>
       </div>`;
     });
   }
@@ -601,13 +645,26 @@ async function cycleStep(cohId, name, k) {
   catch(e) { setSyncStatus('err'); toast('Sync failed'); }
 }
 
-async function togSup(cohId, name, k) {
+async function cycleStepS(cohId, name, k) {
   const key = cohId + ':' + name;
-  if (!studentState[key]) studentState[key] = { rd: 0, ci: 0, status: 'Not contacted', upgraded: false };
-  studentState[key][k] = studentState[key][k] ? 0 : 1;
+  if (!studentState[key]) studentState[key] = { steps: {}, status: 'Not contacted', nudges: 0 };
+  if (!studentState[key].steps) studentState[key].steps = {};
+  const cur = studentState[key].steps[k] || 0;
+  studentState[key].steps[k] = (cur + 1) % 3;
   renderPipeline(cohId);
   setSyncStatus('syncing');
   try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); toast('Sync failed'); }
+}
+
+async function addNudge(cohId, name) {
+  const key = cohId + ':' + name;
+  if (!studentState[key]) studentState[key] = { steps: {}, status: 'Not contacted', nudges: 0 };
+  studentState[key].nudges = (studentState[key].nudges || 0) + 1;
+  studentState[key].lastNudge = new Date().toISOString();
+  renderPipeline(cohId);
+  setSyncStatus('syncing');
+  try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); toast('Nudge logged'); }
   catch(e) { setSyncStatus('err'); }
 }
 
@@ -716,14 +773,18 @@ function renderAllCohorts() {
 }
 
 // ─── MANAGER REPORT ───────────────────────────────────────────────────────────
+let activeCohortTab = 'all';
+
 function renderReport() {
   const today = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   document.getElementById('rpt-date').textContent = 'Generated: ' + today;
-  const cohs = Object.values(cohorts);
+  const cohs = Object.values(cohorts).sort((a, b) => a.name.localeCompare(b.name));
   const allS  = cohs.reduce((a, c) => a + (c.students||[]).length, 0);
   const allP  = cohs.reduce((a, c) => a + (c.students||[]).filter(s => s.score >= c.thresh).length, 0);
   const allPl = cohs.reduce((a, c) => a + (c.students||[]).filter(s => { const st = studentState[c.id+':'+s.name]; return st&&st.steps&&st.steps.pool===2; }).length, 0);
-  let html = `<div class="rc">
+
+  // Summary cards always visible
+  let html = `<div class="rc" style="margin-bottom:16px">
     <div class="rst">Executive summary — all cohorts</div>
     <div class="sg">
       <div class="sb2"><div class="sbl">Cohorts active</div><div class="sbv">${cohs.length}</div></div>
@@ -732,12 +793,63 @@ function renderReport() {
       <div class="sb2"><div class="sbl">In priority pool</div><div class="sbv" style="color:var(--te)">${allPl}</div></div>
     </div>
   </div>`;
-  cohs.sort((a, b) => a.name.localeCompare(b.name)).forEach(coh => {
+
+  // Tab bar
+  html += `<div style="display:flex;gap:0;border-bottom:0.5px solid var(--b);margin-bottom:16px;overflow-x:auto;flex-wrap:nowrap">
+    <button class="rtab${activeCohortTab==='all'?' rtab-active':''}" onclick="switchReportTab('all')">All cohorts</button>`;
+  cohs.forEach(coh => {
+    const placed = (coh.students||[]).filter(s => { const st = studentState[coh.id+':'+s.name]; return st&&st.steps&&st.steps.pool===2; }).length;
+    html += `<button class="rtab${activeCohortTab===coh.id?' rtab-active':''}" onclick="switchReportTab('${coh.id}')">
+      ${coh.name} <span style="font-size:9px;opacity:.6;margin-left:3px">${(coh.students||[]).length}</span>
+    </button>`;
+  });
+  html += `</div><div id="report-tab-content">`;
+  html += buildReportTabContent(activeCohortTab, cohs);
+  html += `</div>`;
+
+  document.getElementById('report-body').innerHTML = html;
+}
+
+function switchReportTab(tabId) {
+  activeCohortTab = tabId;
+  // update tab styles
+  document.querySelectorAll('.rtab').forEach(t => t.classList.remove('rtab-active'));
+  event.currentTarget.classList.add('rtab-active');
+  const cohs = Object.values(cohorts).sort((a,b) => a.name.localeCompare(b.name));
+  document.getElementById('report-tab-content').innerHTML = buildReportTabContent(tabId, cohs);
+}
+
+function buildReportTabContent(tabId, cohs) {
+  const targets = tabId === 'all' ? cohs : cohs.filter(c => c.id === tabId);
+  let html = '';
+  targets.forEach(coh => {
     const priority = (coh.students||[]).filter(s => s.score >= coh.thresh);
     const support  = (coh.students||[]).filter(s => s.score < coh.thresh);
+    const pDone = priority.reduce((a,s)=>{ const st=studentState[coh.id+':'+s.name]; return a+(st&&st.steps?STEPS.filter(d=>st.steps[d.k]===2).length:0); },0);
+    const pPct = priority.length ? Math.round(pDone/(priority.length*STEPS.length)*100) : 0;
+    const placed = priority.filter(s=>{ const st=studentState[coh.id+':'+s.name]; return st&&st.steps&&st.steps.pool===2; }).length;
+
+    // Cohort mini-summary
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:${tabId==='all'?'20px':'0'}">
+      <div style="font-size:14px;font-weight:600">${coh.name}</div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--tx3)">
+        <span>${(coh.students||[]).length} students</span>
+        <span style="color:var(--pu)">${priority.length} priority</span>
+        <span style="color:var(--te)">${placed} placed</span>
+        <span style="font-weight:500;color:var(--tx2)">${pPct}% pipeline done</span>
+      </div>
+    </div>`;
+
     if (priority.length) {
-      html += `<div class="rc"><div class="rst">${coh.name} — priority track (${priority.length} students)</div>
-      <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>CV</th><th>LI</th><th>PF</th><th>M1</th><th>M2</th><th>M3</th><th>Pool</th><th>Overall</th></tr></thead><tbody>`;
+      html += `<div class="rc" style="margin-bottom:10px">
+        <div class="rst" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Priority track <span style="font-weight:400;color:var(--tx3)">(${priority.length} students)</span></span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div style="width:80px;height:4px;background:var(--surf2);border-radius:2px"><div style="width:${pPct}%;height:4px;background:var(--pu);border-radius:2px"></div></div>
+            <span style="font-size:10px;color:var(--tx3)">${pPct}%</span>
+          </div>
+        </div>
+        <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>CV</th><th>LI</th><th>PF</th><th>M1</th><th>M2</th><th>M3</th><th>Pool</th><th>Overall</th></tr></thead><tbody>`;
       priority.forEach(s => {
         const st = studentState[coh.id+':'+s.name] || { steps: {} };
         if (!st.steps) st.steps = {};
@@ -748,20 +860,35 @@ function renderReport() {
       html += `</tbody></table></div>`;
     }
     if (support.length) {
-      html += `<div class="rc"><div class="rst">${coh.name} — support track (${support.length} students)</div>
-      <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>Resource drop</th><th>Check-in</th><th>Upgraded</th><th>Status</th></tr></thead><tbody>`;
+      const supSteps = support.reduce((a,s)=>{ const st=studentState[coh.id+':'+s.name]; return a+(st&&st.steps?STEPS.filter(d=>st.steps[d.k]===2).length:0); },0);
+      const supPct = support.length ? Math.round(supSteps/(support.length*STEPS.length)*100) : 0;
+      html += `<div class="rc" style="margin-bottom:10px">
+        <div class="rst" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Support track <span style="font-weight:400;color:var(--tx3)">(${support.length} students · same pipeline, more support)</span></span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div style="width:80px;height:4px;background:var(--surf2);border-radius:2px"><div style="width:${supPct}%;height:4px;background:var(--te);border-radius:2px"></div></div>
+            <span style="font-size:10px;color:var(--tx3)">${supPct}%</span>
+          </div>
+        </div>
+        <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>CV</th><th>LI</th><th>PF</th><th>M1</th><th>M2</th><th>M3</th><th>Pool</th><th>Nudges</th><th>Pace</th><th>Overall</th></tr></thead><tbody>`;
       support.forEach(s => {
-        const st = studentState[coh.id+':'+s.name] || { rd:0, ci:0, upgraded:false, status:'—' };
-        html += `<tr><td>${s.name}</td><td>${s.score}</td>
-          <td style="color:${st.rd?'var(--te)':'var(--tx3)'}">${st.rd?'Sent':'—'}</td>
-          <td style="color:${st.ci?'var(--te)':'var(--tx3)'}">${st.ci?'Done':'—'}</td>
-          <td style="color:${st.upgraded?'var(--pu)':'var(--tx3)'}">${st.upgraded?'Yes':'—'}</td>
-          <td style="color:var(--tx3)">${st.status||'—'}</td></tr>`;
+        const st = studentState[coh.id+':'+s.name] || { steps:{}, nudges:0, status:'—' };
+        if (!st.steps) st.steps = {};
+        const done = STEPS.filter(d => st.steps[d.k] === 2).length;
+        const inProg = STEPS.filter(d => st.steps[d.k] === 1).length;
+        const cell = k => { const v = st.steps[k]||0; return `<td style="color:${v===2?'var(--te)':v===1?'var(--te)':'var(--tx3)'}">${v===2?'✓':v===1?'…':'—'}</td>`; };
+        let pace, paceColor;
+        if (done === STEPS.length) { pace='Done'; paceColor='var(--te)'; }
+        else if ((st.nudges||0) > 3 && done < 2) { pace='Stalled'; paceColor='var(--re)'; }
+        else if ((st.nudges||0) > 1 && inProg===0 && done < 3) { pace='Slow'; paceColor='var(--am)'; }
+        else if (done > 0 || inProg > 0) { pace='Active'; paceColor='var(--te)'; }
+        else { pace='—'; paceColor='var(--tx3)'; }
+        html += `<tr><td>${s.name}</td><td>${s.score}</td>${cell('resume')}${cell('linkedin')}${cell('portfolio')}${cell('mock1')}${cell('mock2')}${cell('mock3')}${cell('pool')}<td style="color:var(--tx3)">${st.nudges||0}</td><td style="color:${paceColor};font-weight:500">${pace}</td><td><strong>${Math.round(done/STEPS.length*100)}%</strong></td></tr>`;
       });
       html += `</tbody></table></div>`;
     }
   });
-  document.getElementById('report-body').innerHTML = html;
+  return html || '<div class="empty">No data yet for this cohort.</div>';
 }
 
 // ─── CSV EXPORT ───────────────────────────────────────────────────────────────
