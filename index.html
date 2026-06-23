@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airtribe — Placement Pipeline</title>
+<style>
+:root{
+  --bg:#f7f7f5;--surf:#fff;--surf2:#f0efeb;
+  --b:rgba(0,0,0,0.08);--bs:rgba(0,0,0,0.15);
+  --tx:#1a1a18;--tx2:#6b6b67;--tx3:#9e9e99;
+  --pu:#534AB7;--pul:#EEEDFE;--pud:#3C3489;
+  --te:#1D9E75;--tel:#E1F5EE;--ted:#085041;
+  --am:#BA7517;--aml:#FAEEDA;--amd:#633806;
+  --re:#E24B4A;--rel:#FCEBEB;
+  --r:8px;--rl:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
+
+/* CONFIG SCREEN */
+.config-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.config-card{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:36px 40px;width:480px;max-width:100%}
+.config-logo{font-size:16px;font-weight:600;margin-bottom:4px}
+.config-sub{font-size:12px;color:var(--tx3);margin-bottom:28px}
+.config-step{display:flex;gap:12px;margin-bottom:20px;padding:14px;background:var(--surf2);border-radius:var(--r)}
+.config-step-num{width:22px;height:22px;border-radius:50%;background:var(--pu);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.config-step-body{font-size:12px;color:var(--tx2);line-height:1.6}
+.config-step-body strong{color:var(--tx);font-weight:500}
+.config-step-body code{background:rgba(83,74,183,0.1);color:var(--pu);padding:1px 5px;border-radius:4px;font-size:11px;font-family:monospace}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;color:var(--tx2);margin-bottom:5px;font-weight:500}
+.form-row input{width:100%;padding:9px 12px;border:0.5px solid var(--bs);border-radius:var(--r);font-size:12px;font-family:inherit;background:var(--surf);color:var(--tx)}
+.form-row input:focus{outline:none;border-color:var(--pu)}
+.form-row .hint{font-size:10px;color:var(--tx3);margin-top:4px}
+.config-err{background:var(--rel);color:var(--re);border-radius:var(--r);padding:8px 12px;font-size:11px;margin-bottom:12px;display:none}
+
+/* SHELL */
+.shell{display:flex;height:100vh;overflow:hidden;display:none}
+.sidebar{width:210px;background:var(--surf);border-right:0.5px solid var(--b);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;overflow-y:auto;padding:24px 28px;min-width:0}
+
+/* SIDEBAR */
+.sb-top{padding:16px;border-bottom:0.5px solid var(--b)}
+.sb-brand{font-size:14px;font-weight:600;letter-spacing:-0.01em}
+.sb-sub{font-size:10px;color:var(--tx3);margin-top:2px}
+.sb-lbl{font-size:9px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;padding:8px 18px 3px}
+.coh-btn{display:flex;align-items:center;justify-content:space-between;padding:7px 18px;cursor:pointer;color:var(--tx2);font-size:12px;border:none;background:none;width:100%;text-align:left}
+.coh-btn:hover{background:var(--surf2);color:var(--tx)}
+.coh-btn.active{background:var(--pul);color:var(--pud);font-weight:500}
+.coh-cnt{font-size:9px;padding:1px 6px;border-radius:10px;background:rgba(0,0,0,0.06)}
+.coh-btn.active .coh-cnt{background:rgba(83,74,183,0.15);color:var(--pu)}
+.sb-add{margin:8px 12px;padding:7px 12px;border:0.5px dashed var(--bs);border-radius:var(--r);background:none;color:var(--tx3);font-size:11px;cursor:pointer;width:calc(100% - 24px);font-family:inherit}
+.sb-add:hover{background:var(--surf2);color:var(--tx2);border-style:solid}
+.sb-nav{padding:8px 0;border-top:0.5px solid var(--b)}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:6px 18px;cursor:pointer;color:var(--tx2);font-size:12px;border:none;background:none;width:100%;text-align:left}
+.nav-btn:hover{background:var(--surf2)}
+.nav-btn.active{color:var(--pu);font-weight:500}
+.nav-btn svg{width:13px;height:13px;flex-shrink:0}
+.sb-foot{padding:10px 16px 14px;border-top:0.5px solid var(--b);font-size:10px;color:var(--tx3);display:flex;align-items:center;gap:6px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--te);flex-shrink:0}
+.sync-dot.syncing{background:var(--am);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--re)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* PAGE */
+.ph{margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ph-left .pt{font-size:18px;font-weight:600;letter-spacing:-0.02em}
+.ph-left .ps{font-size:12px;color:var(--tx2);margin-top:3px}
+.ph-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:var(--r);border:0.5px solid var(--bs);background:var(--surf);color:var(--tx2);font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn:hover{background:var(--surf2)}
+.btn.pr{background:var(--pu);color:#fff;border-color:var(--pu)}
+.btn.pr:hover{background:var(--pud)}
+.btn.sm{padding:4px 10px;font-size:10px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* SECTIONS */
+.sec{display:none}.sec.active{display:block}
+
+/* METRICS */
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.mc{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:14px 16px}
+.ml{font-size:9px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.mv{font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1}
+.ms{font-size:10px;color:var(--tx3);margin-top:4px}
+.mc.ap .mv{color:var(--pu)}.mc.at .mv{color:var(--te)}.mc.aa .mv{color:var(--am)}
+.pbar-w{height:3px;background:var(--surf2);border-radius:2px;margin-top:6px}
+.pbar-f{height:3px;border-radius:2px;background:var(--pu);transition:width .4s}
+
+/* PIPELINE */
+.banner{border-radius:0 var(--r) var(--r) 0;padding:8px 12px;margin-bottom:12px;font-size:11px;line-height:1.6;border-left:3px solid}
+.banner.p{background:var(--pul);color:var(--pud);border-color:var(--pu)}
+.banner.a{background:var(--aml);color:var(--amd);border-color:var(--am)}
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--tx2)}
+.ld{width:7px;height:7px;border-radius:50%}
+.col-hdr{display:grid;gap:10px;padding:0 14px 5px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)}
+.col-p{grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 65px}
+.col-s{grid-template-columns:32px minmax(0,1.5fr) 52px 80px 90px 65px}
+.srow{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:11px 14px;margin-bottom:6px;display:grid;align-items:center;gap:10px}
+.prow{grid-template-columns:32px minmax(0,1.5fr) 52px 1fr 65px}
+.srow2{grid-template-columns:32px minmax(0,1.5fr) 52px 80px 90px 65px}
+.srow:hover{border-color:var(--bs)}
+.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.avp{background:var(--pul);color:var(--pud)}.avs{background:var(--tel);color:var(--ted)}
+.sn{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.se{font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.sp{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;text-align:center;white-space:nowrap}
+.spp{background:var(--pul);color:var(--pud)}.sps{background:var(--tel);color:var(--ted)}
+.sw{display:flex;align-items:center;gap:3px}
+.sd{width:22px;height:22px;border-radius:50%;border:1px solid var(--bs);display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:600;color:var(--tx3);cursor:pointer;background:var(--surf);flex-shrink:0;user-select:none;transition:all .1s}
+.sd:hover{border-color:var(--pu);color:var(--pu)}
+.sd.ip{background:var(--pul);border-color:var(--pu);color:var(--pu)}
+.sd.dn{background:var(--te);border-color:var(--te);color:#fff}
+.sd.dn::after{content:'✓';font-size:9px}
+.sd.dn span{display:none}
+.sc2{width:6px;height:1px;background:var(--bs);flex-shrink:0}
+.sel{font-size:10px;padding:3px 6px;border-radius:var(--r);border:0.5px solid var(--bs);background:var(--surf);color:var(--tx);cursor:pointer;font-family:inherit;width:100%}
+
+/* ALL COHORTS */
+.all-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.coh-card{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:16px;cursor:pointer}
+.coh-card:hover{border-color:var(--bs)}
+.coh-card-name{font-size:13px;font-weight:600;margin-bottom:3px}
+.pill{display:inline-block;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:500;vertical-align:middle}
+.pill-p{background:var(--pul);color:var(--pud)}.pill-t{background:var(--tel);color:var(--ted)}
+
+/* REPORT */
+.rc{background:var(--surf);border:0.5px solid var(--b);border-radius:var(--rl);padding:20px 22px;margin-bottom:14px}
+.rst{font-size:12px;font-weight:600;margin-bottom:10px;padding-bottom:7px;border-bottom:0.5px solid var(--b)}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.sb2{background:var(--surf2);border-radius:var(--r);padding:10px 12px}
+.sbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px}
+.sbv{font-size:18px;font-weight:600}
+.rtbl{width:100%;border-collapse:collapse;font-size:11px}
+.rtbl th{text-align:left;padding:5px 8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);border-bottom:0.5px solid var(--b)}
+.rtbl td{padding:7px 8px;border-bottom:0.5px solid var(--b);color:var(--tx)}
+.rtbl tr:last-child td{border-bottom:none}
+.rtbl tr:hover td{background:var(--surf2)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surf);border-radius:var(--rl);padding:24px;width:440px;max-width:90vw}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.form-row2{margin-bottom:12px}
+.form-row2 label{display:block;font-size:11px;color:var(--tx2);margin-bottom:4px;font-weight:500}
+.form-row2 input,.form-row2 select,.form-row2 textarea{width:100%;padding:7px 10px;border:0.5px solid var(--bs);border-radius:var(--r);font-size:12px;font-family:inherit;background:var(--surf);color:var(--tx)}
+.form-row2 textarea{min-height:100px;resize:vertical;font-size:11px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:12px}
+.spinner{width:28px;height:28px;border:2px solid var(--b);border-top-color:var(--pu);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:12px;color:var(--tx3)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1a18;color:#fff;padding:9px 16px;border-radius:var(--r);font-size:11px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:200}
+.toast.show{opacity:1}
+
+/* EMPTY */
+.empty{padding:48px;text-align:center;color:var(--tx3);font-size:12px}
+
+@media print{.sidebar,.ph-right,.btn,.sd,.sel,#modal-add-cohort,#modal-add-student,.loading-overlay{display:none!important}.main{padding:0}.shell{display:block!important}.sec{display:block!important}body{background:#fff}}
+@media(max-width:800px){.shell{flex-direction:column}.sidebar{width:100%;height:auto}.mrow{grid-template-columns:1fr 1fr}.all-grid{grid-template-columns:1fr 1fr}.prow,.srow2{grid-template-columns:32px 1fr 52px}.srow .sw,.srow .sel{display:none}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Connecting to database…</div>
+</div>
+
+<!-- CONFIG SCREEN (shown if no Supabase credentials saved) -->
+<div class="config-screen" id="config-screen" style="display:none">
+  <div class="config-card">
+    <div class="config-logo">Airtribe — Placement Pipeline</div>
+    <div class="config-sub">One-time setup — connect your Supabase database</div>
+
+    <div class="config-step">
+      <div class="config-step-num">1</div>
+      <div class="config-step-body">
+        Go to <strong>supabase.com</strong> → New project → choose a name and region → wait ~2 min for it to provision.
+      </div>
+    </div>
+    <div class="config-step">
+      <div class="config-step-num">2</div>
+      <div class="config-step-body">
+        In your project go to <strong>SQL Editor</strong> and run this query to create the two tables:<br><br>
+        <code>CREATE TABLE cohorts (id text PRIMARY KEY, name text, thresh numeric, students jsonb);</code><br>
+        <code>CREATE TABLE student_state (key text PRIMARY KEY, state jsonb);</code><br><br>
+        Then go to <strong>Authentication → Policies</strong> and enable <strong>Row Level Security OFF</strong> for both tables (or add an anon policy).
+      </div>
+    </div>
+    <div class="config-step">
+      <div class="config-step-num">3</div>
+      <div class="config-step-body">
+        Go to <strong>Project Settings → API</strong>. Copy your <strong>Project URL</strong> and <strong>anon public key</strong> and paste them below.
+      </div>
+    </div>
+
+    <div class="config-err" id="config-err"></div>
+    <div class="form-row">
+      <label>Supabase Project URL</label>
+      <input id="sb-url" placeholder="https://xyzxyz.supabase.co">
+      <div class="hint">Found in Project Settings → API → Project URL</div>
+    </div>
+    <div class="form-row">
+      <label>Supabase Anon Key</label>
+      <input id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      <div class="hint">Found in Project Settings → API → Project API Keys → anon public</div>
+    </div>
+    <button class="btn pr" style="width:100%;padding:10px" id="connect-btn" onclick="connectSupabase()">Connect database</button>
+    <div style="font-size:10px;color:var(--tx3);text-align:center;margin-top:12px">Credentials are saved in your browser. Only you see this setup screen.</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="shell" id="app-shell">
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-brand">Airtribe</div>
+      <div class="sb-sub">Placement pipeline</div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div class="sb-lbl">Cohorts</div>
+      <div id="cohort-list"></div>
+      <button class="sb-add" onclick="openModal('modal-add-cohort')">+ Add cohort</button>
+      <div class="sb-nav">
+        <div class="sb-lbl">Views</div>
+        <button class="nav-btn active" id="nav-pipeline" onclick="switchView('pipeline',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+          Pipeline
+        </button>
+        <button class="nav-btn" id="nav-all" onclick="switchView('all',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+          All cohorts
+        </button>
+        <button class="nav-btn" id="nav-report" onclick="switchView('report',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M5 5h6M5 11h3"/></svg>
+          Manager report
+        </button>
+      </div>
+    </div>
+    <div class="sb-foot">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Connected</span>
+      <span style="margin-left:auto;cursor:pointer;color:var(--tx3)" onclick="resetCredentials()" title="Disconnect">⎋</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="sec active" id="sec-pipeline">
+      <div class="ph">
+        <div class="ph-left">
+          <div class="pt" id="coh-title">Select a cohort</div>
+          <div class="ps" id="coh-sub">Pick a cohort from the sidebar</div>
+        </div>
+        <div class="ph-right">
+          <button class="btn sm" onclick="openModal('modal-add-student')">+ Add student</button>
+          <button class="btn sm" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <div id="pipeline-body"><div class="empty">← Select a cohort to begin</div></div>
+    </div>
+
+    <div class="sec" id="sec-all">
+      <div class="ph"><div class="ph-left"><div class="pt">All cohorts</div><div class="ps" id="all-sub"></div></div></div>
+      <div id="all-grid"></div>
+    </div>
+
+    <div class="sec" id="sec-report">
+      <div class="ph">
+        <div class="ph-left"><div class="pt">Manager report</div><div class="ps" id="rpt-date"></div></div>
+        <button class="btn pr" onclick="window.print()">Print / PDF</button>
+      </div>
+      <div id="report-body"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ADD COHORT MODAL -->
+<div id="modal-add-cohort" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modal-add-cohort')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add new cohort</h3>
+      <div class="form-row2"><label>Cohort name (e.g. PML C30)</label><input id="new-coh-name" placeholder="PML C30"></div>
+      <div class="form-row2">
+        <label>Student data — one per line: Name, Email, Score</label>
+        <textarea id="new-coh-data" placeholder="Surumya, surumya@gmail.com, 9.8&#10;Anshit Sanjay, anshit@gmail.com, 9.3&#10;Yash Ramwani, yash@gmail.com, 7.9"></textarea>
+      </div>
+      <div class="form-row2"><label>Priority threshold (score ≥ this = fast-tracked)</label><input id="new-coh-thresh" type="number" value="8.6" step="0.1" min="0" max="10"></div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('modal-add-cohort')">Cancel</button>
+        <button class="btn pr" id="save-cohort-btn" onclick="saveCohort()">Add cohort</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div id="modal-add-student" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modal-add-student')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add student to <span id="modal-coh-name"></span></h3>
+      <div class="form-row2"><label>Full name</label><input id="new-st-name" placeholder="Full name"></div>
+      <div class="form-row2"><label>Email</label><input id="new-st-email" placeholder="email@gmail.com"></div>
+      <div class="form-row2"><label>Capstone score</label><input id="new-st-score" type="number" step="0.1" min="0" max="10" placeholder="8.5"></div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('modal-add-student')">Cancel</button>
+        <button class="btn pr" id="save-student-btn" onclick="saveStudent()">Add student</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const STEPS = [
+  {k:'resume',l:'CV'}, {k:'linkedin',l:'LI'}, {k:'portfolio',l:'PF'},
+  {k:'mock1',l:'M1'}, {k:'mock2',l:'M2'}, {k:'mock3',l:'M3'}, {k:'pool',l:'PP'}
+];
+const SNAMES = {resume:'Resume',linkedin:'LinkedIn',portfolio:'Portfolio',mock1:'Product design',mock2:'Tech & AI',mock3:'Behavioural',pool:'Priority pool'};
+const SOPTS = ['Not contacted','Contacted','In progress','Blocked','Completed'];
+const CRED_KEY = 'at_supabase_creds';
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let SB_URL = '';
+let SB_KEY = '';
+let cohorts = {};
+let studentState = {};
+let activeCohort = null;
+let pollTimer = null;
+
+// ─── SUPABASE API HELPERS ─────────────────────────────────────────────────────
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    method: opts.method || 'GET',
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function dbGetCohorts() {
+  const rows = await sbFetch('cohorts?select=*');
+  const obj = {};
+  (rows || []).forEach(r => { obj[r.id] = {...r, students: r.students || []}; });
+  return obj;
+}
+
+async function dbUpsertCohort(coh) {
+  await sbFetch('cohorts', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'},
+    body: {id: coh.id, name: coh.name, thresh: coh.thresh, students: coh.students}
+  });
+}
+
+async function dbGetState() {
+  const rows = await sbFetch('student_state?select=*');
+  const obj = {};
+  (rows || []).forEach(r => { obj[r.key] = r.state; });
+  return obj;
+}
+
+async function dbUpsertState(key, state) {
+  await sbFetch('student_state', {
+    method: 'POST',
+    headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'},
+    body: {key, state}
+  });
+}
+
+// ─── CREDENTIALS & SETUP ──────────────────────────────────────────────────────
+function loadCredentials() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CRED_KEY) || 'null');
+    if (c && c.url && c.key) { SB_URL = c.url; SB_KEY = c.key; return true; }
+  } catch(e) {}
+  return false;
+}
+
+async function connectSupabase() {
+  const url = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('sb-key').value.trim();
+  const err = document.getElementById('config-err');
+  const btn = document.getElementById('connect-btn');
+  if (!url || !key) { showConfigErr('Please enter both URL and key.'); return; }
+  btn.textContent = 'Connecting…'; btn.disabled = true;
+  err.style.display = 'none';
+  SB_URL = url; SB_KEY = key;
+  try {
+    await dbGetCohorts();
+    localStorage.setItem(CRED_KEY, JSON.stringify({url, key}));
+    document.getElementById('config-screen').style.display = 'none';
+    await initApp();
+  } catch(e) {
+    SB_URL = ''; SB_KEY = '';
+    showConfigErr('Could not connect. Check your URL and key, and make sure the tables exist.');
+    btn.textContent = 'Connect database'; btn.disabled = false;
+  }
+}
+
+function showConfigErr(msg) {
+  const el = document.getElementById('config-err');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function resetCredentials() {
+  if (!confirm('Disconnect from Supabase? You will need to re-enter credentials.')) return;
+  localStorage.removeItem(CRED_KEY);
+  location.reload();
+}
+
+// ─── APP INIT ─────────────────────────────────────────────────────────────────
+async function initApp() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-text').textContent = 'Loading pipeline data…';
+  try {
+    [cohorts, studentState] = await Promise.all([dbGetCohorts(), dbGetState()]);
+    document.getElementById('app-shell').style.display = 'flex';
+    renderSidebar();
+    setSyncStatus('ok');
+    startPolling();
+  } catch(e) {
+    document.getElementById('loading-text').textContent = 'Failed to load. Check database connection.';
+    setSyncStatus('err');
+    return;
+  }
+  document.getElementById('loading').style.display = 'none';
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const [newCohorts, newState] = await Promise.all([dbGetCohorts(), dbGetState()]);
+      cohorts = newCohorts;
+      studentState = newState;
+      renderSidebar();
+      if (activeCohort && cohorts[activeCohort]) renderPipeline(activeCohort);
+      setSyncStatus('ok');
+    } catch(e) { setSyncStatus('err'); }
+  }, 15000);
+}
+
+// ─── SYNC STATUS ──────────────────────────────────────────────────────────────
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot' + (s === 'syncing' ? ' syncing' : s === 'err' ? ' err' : '');
+  lbl.textContent = s === 'syncing' ? 'Saving…' : s === 'err' ? 'Sync error' : 'Live · shared';
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function ini(n) { return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
+function sdCls(v) { return 'sd' + (v === 2 ? ' dn' : v === 1 ? ' ip' : ''); }
+function toast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function openModal(id) { document.getElementById(id).style.display = 'block'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('cohort-list');
+  el.innerHTML = '';
+  Object.values(cohorts).sort((a, b) => a.name.localeCompare(b.name)).forEach(coh => {
+    const btn = document.createElement('button');
+    btn.className = 'coh-btn' + (activeCohort === coh.id ? ' active' : '');
+    btn.innerHTML = `<span>${coh.name}</span><span class="coh-cnt">${(coh.students || []).length}</span>`;
+    btn.onclick = () => {
+      activeCohort = coh.id;
+      renderSidebar();
+      renderPipeline(coh.id);
+      switchView('pipeline', document.getElementById('nav-pipeline'));
+    };
+    el.appendChild(btn);
+  });
+}
+
+// ─── PIPELINE VIEW ────────────────────────────────────────────────────────────
+function renderPipeline(cohId) {
+  const coh = cohorts[cohId];
+  if (!coh) return;
+  document.getElementById('coh-title').textContent = coh.name;
+  document.getElementById('coh-sub').textContent = `${(coh.students||[]).length} students · priority threshold ≥ ${coh.thresh}`;
+
+  const priority = (coh.students || []).filter(s => s.score >= coh.thresh);
+  const support  = (coh.students || []).filter(s => s.score < coh.thresh);
+  const pDone = priority.reduce((a, s) => {
+    const st = studentState[cohId + ':' + s.name];
+    return a + (st && st.steps ? STEPS.filter(d => st.steps[d.k] === 2).length : 0);
+  }, 0);
+  const pTotal = priority.length * STEPS.length;
+  const pct = pTotal ? Math.round(pDone / pTotal * 100) : 0;
+  const placed = priority.filter(s => { const st = studentState[cohId + ':' + s.name]; return st && st.steps && st.steps.pool === 2; }).length;
+
+  let html = `
+  <div class="mrow">
+    <div class="mc"><div class="ml">Total</div><div class="mv">${(coh.students||[]).length}</div><div class="ms">students in cohort</div></div>
+    <div class="mc ap"><div class="ml">Priority track</div><div class="mv">${priority.length}</div><div class="ms">score ≥ ${coh.thresh}</div></div>
+    <div class="mc at"><div class="ml">Support track</div><div class="mv">${support.length}</div><div class="ms">score &lt; ${coh.thresh}</div></div>
+    <div class="mc aa"><div class="ml">Pipeline progress</div><div class="mv">${pct}%</div><div class="ms">${placed} in priority pool<div class="pbar-w"><div class="pbar-f" style="width:${pct}%"></div></div></div></div>
+  </div>
+  <div style="font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+    Priority track <span class="pill pill-p">${priority.length} students</span>
+  </div>
+  <div class="banner p"><strong>Step 1:</strong> Resume · LinkedIn · Portfolio → <strong>Step 2:</strong> Mock interviews (Product, Tech & AI, Behavioural) → <strong>Step 3:</strong> Priority pool + CA push</div>
+  <div class="leg">
+    <div class="li"><div class="ld" style="border:1px solid #ccc;background:#fff"></div>Not started</div>
+    <div class="li"><div class="ld" style="background:var(--pul);border:1px solid var(--pu)"></div>In progress</div>
+    <div class="li"><div class="ld" style="background:var(--te)"></div>Done</div>
+  </div>
+  <div class="col-hdr col-p"><span></span><span>Student</span><span>Score</span><span>CV · LI · PF · M1 · M2 · M3 · PP</span><span>Status</span></div>`;
+
+  priority.forEach(s => {
+    const key = cohId + ':' + s.name;
+    const st = studentState[key] || { steps: {}, status: 'Not contacted' };
+    if (!st.steps) st.steps = {};
+    const done = STEPS.filter(d => st.steps[d.k] === 2).length;
+    const pct2 = Math.round(done / STEPS.length * 100);
+    const next = STEPS.find(d => st.steps[d.k] !== 2);
+    const stH = STEPS.map((d, i) => {
+      const v = st.steps[d.k] || 0;
+      const conn = i < STEPS.length - 1 ? '<div class="sc2"></div>' : '';
+      return `<div class="${sdCls(v)}" title="${SNAMES[d.k]}" onclick="cycleStep('${cohId}','${s.name}','${d.k}')">${v !== 2 ? `<span>${d.l}</span>` : ''}</div>${conn}`;
+    }).join('');
+    const sopts = SOPTS.map(o => `<option${st.status === o ? ' selected' : ''}>${o}</option>`).join('');
+    html += `<div class="srow prow">
+      <div class="av avp">${ini(s.name)}</div>
+      <div><div class="sn">${s.name}</div><div class="se">${s.email}</div><div class="pbar-w"><div class="pbar-f" style="width:${pct2}%"></div></div></div>
+      <div class="sp spp">${s.score}</div>
+      <div><div class="sw">${stH}</div><div style="font-size:9px;color:var(--tx3);margin-top:2px">Next: ${next ? SNAMES[next.k] : 'All done ✓'}</div></div>
+      <select class="sel" onchange="setStatus('${cohId}','${s.name}',this.value)">${sopts}</select>
+    </div>`;
+  });
+
+  if (support.length) {
+    html += `<div style="font-size:13px;font-weight:600;margin:18px 0 10px;display:flex;align-items:center;gap:8px">
+      Support track <span class="pill pill-t">${support.length} students</span>
+    </div>
+    <div class="banner a">Weekly resource drops and check-ins. Tick Upgrade to move a student to the priority track.</div>
+    <div class="col-hdr col-s"><span></span><span>Student</span><span>Score</span><span>Actions</span><span>Upgrade</span><span>Status</span></div>`;
+    support.forEach(s => {
+      const key = cohId + ':' + s.name;
+      const st = studentState[key] || { rd: 0, ci: 0, status: 'Not contacted', upgraded: false };
+      const sopts = SOPTS.map(o => `<option${st.status === o ? ' selected' : ''}>${o}</option>`).join('');
+      html += `<div class="srow srow2">
+        <div class="av avs">${ini(s.name)}</div>
+        <div><div class="sn">${s.name}</div><div class="se">${s.email}</div></div>
+        <div class="sp sps">${s.score}</div>
+        <div class="sw">
+          <div class="${st.rd ? 'sd dn' : 'sd'}" title="Resource drop sent" onclick="togSup('${cohId}','${s.name}','rd')">${!st.rd ? '<span>RD</span>' : ''}</div>
+          <div class="sc2"></div>
+          <div class="${st.ci ? 'sd dn' : 'sd'}" title="Check-in done" onclick="togSup('${cohId}','${s.name}','ci')">${!st.ci ? '<span>CI</span>' : ''}</div>
+          <span style="font-size:9px;color:var(--tx3);margin-left:4px">${(st.rd || 0) + (st.ci || 0)}/2</span>
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2);cursor:pointer">
+          <input type="checkbox"${st.upgraded ? ' checked' : ''} onchange="setUpg('${cohId}','${s.name}',this.checked)"> Upgrade ↑
+        </label>
+        <select class="sel" onchange="setStatus('${cohId}','${s.name}',this.value)">${sopts}</select>
+      </div>`;
+    });
+  }
+  document.getElementById('pipeline-body').innerHTML = html;
+}
+
+// ─── DATA MUTATIONS ───────────────────────────────────────────────────────────
+async function cycleStep(cohId, name, k) {
+  const key = cohId + ':' + name;
+  if (!studentState[key]) studentState[key] = { steps: {}, status: 'Not contacted' };
+  if (!studentState[key].steps) studentState[key].steps = {};
+  const cur = studentState[key].steps[k] || 0;
+  studentState[key].steps[k] = (cur + 1) % 3;
+  renderPipeline(cohId);
+  setSyncStatus('syncing');
+  try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); toast('Sync failed'); }
+}
+
+async function togSup(cohId, name, k) {
+  const key = cohId + ':' + name;
+  if (!studentState[key]) studentState[key] = { rd: 0, ci: 0, status: 'Not contacted', upgraded: false };
+  studentState[key][k] = studentState[key][k] ? 0 : 1;
+  renderPipeline(cohId);
+  setSyncStatus('syncing');
+  try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); }
+}
+
+async function setStatus(cohId, name, v) {
+  const key = cohId + ':' + name;
+  if (!studentState[key]) studentState[key] = {};
+  studentState[key].status = v;
+  setSyncStatus('syncing');
+  try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); }
+}
+
+async function setUpg(cohId, name, v) {
+  const key = cohId + ':' + name;
+  if (!studentState[key]) studentState[key] = {};
+  studentState[key].upgraded = v;
+  renderPipeline(cohId);
+  setSyncStatus('syncing');
+  try { await dbUpsertState(key, studentState[key]); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); }
+}
+
+// ─── ADD COHORT ───────────────────────────────────────────────────────────────
+async function saveCohort() {
+  const name   = document.getElementById('new-coh-name').value.trim();
+  const raw    = document.getElementById('new-coh-data').value.trim();
+  const thresh = parseFloat(document.getElementById('new-coh-thresh').value) || 8.6;
+  if (!name) { toast('Please enter a cohort name'); return; }
+  const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const students = raw.split('\n').filter(l => l.trim()).map(l => {
+    const p = l.split(',').map(x => x.trim());
+    return { name: p[0] || '', email: p[1] || '—', score: parseFloat(p[2]) || 0 };
+  }).filter(s => s.name && s.score > 0);
+  const btn = document.getElementById('save-cohort-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const coh = { id, name, thresh, students };
+    await dbUpsertCohort(coh);
+    cohorts[id] = coh;
+    renderSidebar();
+    closeModal('modal-add-cohort');
+    activeCohort = id;
+    renderPipeline(id);
+    switchView('pipeline', document.getElementById('nav-pipeline'));
+    document.getElementById('new-coh-name').value = '';
+    document.getElementById('new-coh-data').value = '';
+    toast(`${name} added · ${students.length} students · visible to all team members`);
+  } catch(e) {
+    toast('Failed to save cohort. Check database connection.');
+  }
+  btn.textContent = 'Add cohort'; btn.disabled = false;
+}
+
+// ─── ADD STUDENT ──────────────────────────────────────────────────────────────
+async function saveStudent() {
+  if (!activeCohort) { toast('Select a cohort first'); return; }
+  const name  = document.getElementById('new-st-name').value.trim();
+  const email = document.getElementById('new-st-email').value.trim();
+  const score = parseFloat(document.getElementById('new-st-score').value);
+  if (!name || !score) { toast('Name and score are required'); return; }
+  const coh = cohorts[activeCohort];
+  if (!coh) return;
+  if (!coh.students) coh.students = [];
+  coh.students.push({ name, email: email || '—', score });
+  const btn = document.getElementById('save-student-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    await dbUpsertCohort(coh);
+    renderPipeline(activeCohort);
+    renderSidebar();
+    closeModal('modal-add-student');
+    document.getElementById('new-st-name').value = '';
+    document.getElementById('new-st-email').value = '';
+    document.getElementById('new-st-score').value = '';
+    toast(`${name} added · synced to all users`);
+  } catch(e) {
+    toast('Failed to save. Check connection.');
+    coh.students.pop();
+  }
+  btn.textContent = 'Add student'; btn.disabled = false;
+}
+
+// ─── ALL COHORTS VIEW ─────────────────────────────────────────────────────────
+function renderAllCohorts() {
+  const cohs = Object.values(cohorts);
+  const total = cohs.reduce((a, c) => a + (c.students || []).length, 0);
+  document.getElementById('all-sub').textContent = `${cohs.length} cohorts · ${total} total students`;
+  let html = '<div class="all-grid">';
+  cohs.sort((a, b) => a.name.localeCompare(b.name)).forEach(coh => {
+    const p = (coh.students || []).filter(s => s.score >= coh.thresh);
+    const done = p.reduce((a, s) => {
+      const st = studentState[coh.id + ':' + s.name];
+      return a + (st && st.steps ? STEPS.filter(d => st.steps[d.k] === 2).length : 0);
+    }, 0);
+    const pct = p.length ? Math.round(done / (p.length * STEPS.length) * 100) : 0;
+    const placed = p.filter(s => { const st = studentState[coh.id + ':' + s.name]; return st && st.steps && st.steps.pool === 2; }).length;
+    html += `<div class="coh-card" onclick="activeCohort='${coh.id}';renderSidebar();renderPipeline('${coh.id}');switchView('pipeline',document.getElementById('nav-pipeline'))">
+      <div class="coh-card-name">${coh.name}</div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:10px">${(coh.students||[]).length} students · ${p.length} priority · ${placed} placed</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:3px"><span>Pipeline progress</span><span>${pct}%</span></div>
+      <div class="pbar-w"><div class="pbar-f" style="width:${pct}%"></div></div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('all-grid').innerHTML = html;
+}
+
+// ─── MANAGER REPORT ───────────────────────────────────────────────────────────
+function renderReport() {
+  const today = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('rpt-date').textContent = 'Generated: ' + today;
+  const cohs = Object.values(cohorts);
+  const allS  = cohs.reduce((a, c) => a + (c.students||[]).length, 0);
+  const allP  = cohs.reduce((a, c) => a + (c.students||[]).filter(s => s.score >= c.thresh).length, 0);
+  const allPl = cohs.reduce((a, c) => a + (c.students||[]).filter(s => { const st = studentState[c.id+':'+s.name]; return st&&st.steps&&st.steps.pool===2; }).length, 0);
+  let html = `<div class="rc">
+    <div class="rst">Executive summary — all cohorts</div>
+    <div class="sg">
+      <div class="sb2"><div class="sbl">Cohorts active</div><div class="sbv">${cohs.length}</div></div>
+      <div class="sb2"><div class="sbl">Total students</div><div class="sbv">${allS}</div></div>
+      <div class="sb2"><div class="sbl">Priority track</div><div class="sbv" style="color:var(--pu)">${allP}</div></div>
+      <div class="sb2"><div class="sbl">In priority pool</div><div class="sbv" style="color:var(--te)">${allPl}</div></div>
+    </div>
+  </div>`;
+  cohs.sort((a, b) => a.name.localeCompare(b.name)).forEach(coh => {
+    const priority = (coh.students||[]).filter(s => s.score >= coh.thresh);
+    const support  = (coh.students||[]).filter(s => s.score < coh.thresh);
+    if (priority.length) {
+      html += `<div class="rc"><div class="rst">${coh.name} — priority track (${priority.length} students)</div>
+      <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>CV</th><th>LI</th><th>PF</th><th>M1</th><th>M2</th><th>M3</th><th>Pool</th><th>Overall</th></tr></thead><tbody>`;
+      priority.forEach(s => {
+        const st = studentState[coh.id+':'+s.name] || { steps: {} };
+        if (!st.steps) st.steps = {};
+        const done = STEPS.filter(d => st.steps[d.k] === 2).length;
+        const cell = k => { const v = st.steps[k] || 0; return `<td style="color:${v===2?'var(--te)':v===1?'var(--pu)':'var(--tx3)'}">${v===2?'✓':v===1?'…':'—'}</td>`; };
+        html += `<tr><td><strong>${s.name}</strong></td><td>${s.score}</td>${cell('resume')}${cell('linkedin')}${cell('portfolio')}${cell('mock1')}${cell('mock2')}${cell('mock3')}${cell('pool')}<td><strong>${Math.round(done/STEPS.length*100)}%</strong></td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+    if (support.length) {
+      html += `<div class="rc"><div class="rst">${coh.name} — support track (${support.length} students)</div>
+      <table class="rtbl"><thead><tr><th>Student</th><th>Score</th><th>Resource drop</th><th>Check-in</th><th>Upgraded</th><th>Status</th></tr></thead><tbody>`;
+      support.forEach(s => {
+        const st = studentState[coh.id+':'+s.name] || { rd:0, ci:0, upgraded:false, status:'—' };
+        html += `<tr><td>${s.name}</td><td>${s.score}</td>
+          <td style="color:${st.rd?'var(--te)':'var(--tx3)'}">${st.rd?'Sent':'—'}</td>
+          <td style="color:${st.ci?'var(--te)':'var(--tx3)'}">${st.ci?'Done':'—'}</td>
+          <td style="color:${st.upgraded?'var(--pu)':'var(--tx3)'}">${st.upgraded?'Yes':'—'}</td>
+          <td style="color:var(--tx3)">${st.status||'—'}</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+  });
+  document.getElementById('report-body').innerHTML = html;
+}
+
+// ─── CSV EXPORT ───────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!activeCohort) { toast('Select a cohort first'); return; }
+  const coh = cohorts[activeCohort];
+  let csv = 'Name,Email,Score,Track,Resume,LinkedIn,Portfolio,Mock1,Mock2,Mock3,Pool,Status\n';
+  (coh.students || []).forEach(s => {
+    const st = studentState[activeCohort + ':' + s.name] || {};
+    const track = s.score >= coh.thresh ? 'Priority' : 'Support';
+    if (s.score >= coh.thresh) {
+      const steps = STEPS.map(d => ['—','In progress','Done'][(st.steps&&st.steps[d.k])||0]).join(',');
+      csv += `"${s.name}","${s.email}",${s.score},${track},${steps},${st.status||'—'}\n`;
+    } else {
+      csv += `"${s.name}","${s.email}",${s.score},${track},,,,,,,,${st.status||'—'}\n`;
+    }
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `${coh.name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exported');
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+function switchView(v, btn) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sec-' + v).classList.add('active');
+  if (v === 'all') renderAllCohorts();
+  if (v === 'report') renderReport();
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+(async function boot() {
+  if (loadCredentials()) {
+    await initApp();
+  } else {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('config-screen').style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>
